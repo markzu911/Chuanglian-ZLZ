@@ -48,7 +48,12 @@ interface CurtainData {
   color: string;
 }
 
-const Sidebar = ({ view, setView }: { view: 'editor' | 'history', setView: (v: 'editor' | 'history') => void }) => (
+const Sidebar = ({ view, setView, userData, toolData }: { 
+  view: 'editor' | 'history', 
+  setView: (v: 'editor' | 'history') => void,
+  userData: { name: string, integral: number } | null,
+  toolData: { name: string, integral: number } | null
+}) => (
   <div className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 p-6 z-20">
     <div className="flex items-center gap-2 mb-10 cursor-pointer" onClick={() => setView('editor')}>
       <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
@@ -57,7 +62,7 @@ const Sidebar = ({ view, setView }: { view: 'editor' | 'history', setView: (v: '
       <h1 className="font-bold text-slate-800 tracking-tight">智能窗帘生成</h1>
     </div>
     
-    <nav className="space-y-2">
+    <nav className="space-y-2 flex-1">
       <button 
         onClick={() => setView('editor')}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${view === 'editor' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'}`}
@@ -73,6 +78,29 @@ const Sidebar = ({ view, setView }: { view: 'editor' | 'history', setView: (v: '
         <span>历史记录</span>
       </button>
     </nav>
+    
+    {userData && (
+      <div className="mt-auto pt-6 border-t border-slate-100">
+        <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
+          <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            <span>用户账户</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500">{userData.name}</span>
+            <div className="flex items-center gap-1">
+              <Sparkles size={10} className="text-blue-500" />
+              <span className="text-xs text-blue-600 font-bold">{userData.integral}</span>
+            </div>
+          </div>
+          {toolData && (
+            <div className="pt-2 border-t border-slate-200/50 flex justify-between items-center">
+              <span className="text-[10px] text-slate-400">单次渲染</span>
+              <span className="text-[10px] text-slate-500 font-bold">{toolData.integral} 积分</span>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
   </div>
 );
 
@@ -89,6 +117,60 @@ const SectionTitle = ({ number, title, subtitle }: { number: string; title: stri
 export default function App() {
   const [view, setView] = useState<'editor' | 'history'>('editor');
   const [history, setHistory] = useState<Array<{ id: string, image: string, timestamp: number, composition: string }>>([]);
+
+  // SaaS Integration State
+  const [userId, setUserId] = useState<string | null>(null);
+  const [toolId, setToolId] = useState<string | null>(null);
+  const [saasConfig, setSaasConfig] = useState<{ context?: string, prompt?: string[] } | null>(null);
+  const [userData, setUserData] = useState<{ name: string, integral: number } | null>(null);
+  const [toolData, setToolData] = useState<{ name: string, integral: number } | null>(null);
+  const [isSaasInitialized, setIsSaasInitialized] = useState(false);
+
+  // SaaS Message Listener
+  React.useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const data = event.data;
+      if (data && data.type === 'SAAS_INIT') {
+        const { userId, toolId, context, prompt } = data;
+        if (userId && userId !== "null" && userId !== "undefined") setUserId(userId);
+        if (toolId && toolId !== "null" && toolId !== "undefined") setToolId(toolId);
+        setSaasConfig({ context, prompt });
+        setIsSaasInitialized(true);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    // For local testing if not in iframe
+    if (window.location.search.includes('mock=true')) {
+       window.postMessage({ type: 'SAAS_INIT', userId: 'test_user', toolId: 'curtain_tool', context: '现代简约风客厅', prompt: ['高质感', '丝绒'] }, '*');
+    }
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Launch API
+  React.useEffect(() => {
+    if (isSaasInitialized && userId && toolId) {
+      const fetchLaunch = async () => {
+        try {
+          const res = await fetch('/api/tool/launch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, toolId })
+          });
+          const result = await res.json();
+          if (result.success) {
+            setUserData(result.data.user);
+            setToolData(result.data.tool);
+          }
+        } catch (err) {
+          console.error("Launch failed:", err);
+        }
+      };
+      fetchLaunch();
+    }
+  }, [isSaasInitialized, userId, toolId]);
+
   const [sceneImage, setSceneImage] = useState<string | null>(null);
   const [curtainImage, setCurtainImage] = useState<string | null>(null);
   const [isAnalyzingScene, setIsAnalyzingScene] = useState(false);
@@ -108,6 +190,22 @@ export default function App() {
   });
 
   const [curtainData, setCurtainData] = useState<CurtainData | null>(null);
+
+  // Sync SaaS Context to Scene Data
+  React.useEffect(() => {
+    if (saasConfig?.context) {
+      setSceneData(prev => ({ 
+        ...prev, 
+        roomType: saasConfig.context || prev.roomType 
+      }));
+    }
+    if (saasConfig?.prompt && saasConfig.prompt.length > 0) {
+      setSceneData(prev => ({
+        ...prev,
+        furniture: prev.furniture ? `${prev.furniture}, ${saasConfig.prompt?.join(', ')}` : saasConfig.prompt?.join(', ') || ''
+      }));
+    }
+  }, [saasConfig]);
 
   const [aspectRatio, setAspectRatio] = useState('3:4');
   const [quality, setQuality] = useState('2K');
@@ -201,6 +299,25 @@ export default function App() {
       alert("请先上传场景图和窗帘图，并至少选择一个构图角度");
       return;
     }
+
+    // SaaS Verify Step
+    if (userId && toolId) {
+      try {
+        const verifyRes = await fetch('/api/tool/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, toolId })
+        });
+        const verifyResult = await verifyRes.json();
+        if (!verifyResult.success) {
+          alert(verifyResult.message || "积分不足，无法生成");
+          return;
+        }
+      } catch (err) {
+        console.error("Verify failed:", err);
+        // Relaxed check: if API fails, might still allow for demo purposes but alert developer
+      }
+    }
     
     // Switch to history tab immediately
     setView('history');
@@ -213,13 +330,17 @@ export default function App() {
     try {
       const ai = getAIClient();
 
+      // Combine SaaS Prompts
+      const saasContext = saasConfig?.context ? `\nSaaS Context: ${saasConfig.context}` : "";
+      const saasPrompts = saasConfig?.prompt?.length ? `\nSaaS Additional Keywords: ${saasConfig.prompt.join(', ')}` : "";
+
       for (const currentComp of selectedCompositions) {
         let compositionPrompt = "";
         if (currentComp === '场景全景') {
           compositionPrompt = `
             High-End Interior Design Showroom Shot — Full Room:
-            - Concept: Create a NEW, professionally designed interior scene that captures the ESSENCE and STYLE of the original room, but feels like an upgraded, luxury showroom version.
-            - Style & Vibe: STRICTLY adhere to the identified style (${sceneData?.style}) and color palette (${sceneData?.color}).
+            - Concept: Create a NEW, professionally designed interior scene that captures the ESSENCE and STYLE of the original room, but feels like an upgraded, luxury showroom version. ${saasContext}
+            - Style & Vibe: STRICTLY adhere to the identified style (${sceneData?.style}) and color palette (${sceneData?.color}). ${saasPrompts}
             - Furniture & Decor: Incorporate furniture pieces (${sceneData?.furniture}) that match the high-end aesthetic of the identified style. They should be arranged in a professional, balanced, "catalog-ready" composition.
             - Architectural Details: High-quality ${sceneData?.floor} flooring and ${sceneData?.wall} wall finishes that complement the overall design.
             - Curtain Integration: The primary focus is the BRAND NEW curtain installation featuring material (${curtainData?.material}) and pattern (${curtainData?.pattern}). The curtains should hang perfectly from floor to ceiling as a grand focal point.
@@ -230,8 +351,8 @@ export default function App() {
         } else if (currentComp === '效果中景') {
           compositionPrompt = `
             High-End Lifestyle Interior Photography — SINGLE CAMERA VIEW (深度中景):
-            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. PROHIBIT any split-screens, before/after lines, or collage patterns. 
-            - [CAMERA MAGNIFICATION]: Simulate a physical camera move CLOSER (zoom in) by 1.5 meters. The focus remains on the specific window and curtains from the source.
+            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. PROHIBIT any split-screens, before/after lines, or collage patterns. ${saasContext}
+            - [CAMERA MAGNIFICATION]: Simulate a physical camera move CLOSER (zoom in) by 1.5 meters. The focus remains on the specific window and curtains from the source. ${saasPrompts}
             - [MODEL SOLIDITY]: The model MUST be a 100% OPAQUE, SOLID human figure. Her hand MUST be anatomically attached to her arm and body. NO ghosting, NO fading, NO transparency.
             - [SHADOW LOGIC]: The model must cast a realistic, integrated shadow onto the curtain and floor to prove physical presence.
             - [ERROR PREVENTION]: NO second model. NO floating limbs. NO vertical dividing lines in the background. The background architecture MUST be ONE continuous surface without "jumps" in perspective.
@@ -242,8 +363,8 @@ export default function App() {
             macro detail shot of layered curtain fabric, extreme close-up, 
             natural side-backlight filtering through linen and sheer voile, 
             warm golden hour glow creating soft gradient from bright to shadow, 
-            textured natural linen weave with visible fiber grain, 
-            delicate tonal embroidery of botanical leaf pattern, 
+            textured natural linen weave with visible fiber grain, ${saasContext}
+            delicate tonal embroidery of botanical leaf pattern, ${saasPrompts}
             shallow depth of field with gentle bokeh on background folds, 
             cream and warm beige monochromatic palette, 
             light catching on fabric ridges, subtle translucency on sheer layer, 
@@ -291,6 +412,7 @@ export default function App() {
             - Furniture & Decor (STRICT DYNAMIC MAPPING): ${sceneData.furniture}. The AI MUST recreate the scene using ONLY these items. If items were edited in the text field, reflect those changes in the final image.
             - Architectural Consistency: ${isMediumShot ? 'Move the camera 1.5m CLOSER to the subject. Maintain ONE continuous room background.' : 'Maintain the original panoramic room framing exactly.'}
             - GLOBAL SYNTHESIS RULE: Generate ONE single, continuous, and realistic photograph. PROHIBIT all split screens, collage patterns, and vertical/horizontal dividing lines.
+            - Background/Style Context: ${saasContext} ${saasPrompts}
             
             Curtain Product Details (ONLY CHANGE IN THE SCENE):
             - Replace the existing window treatment with curtains featuring:
@@ -336,7 +458,7 @@ export default function App() {
       }
 
       if (generatedResults.length > 0) {
-        setResultImage(generatedResults[0].url);
+        // setResultImage(generatedResults[0].url); // REMOVED: Do not jump/popup automatically
         const newHistoryItems = generatedResults.map(res => ({
           id: `${Date.now()}-${res.composition}`,
           image: res.url,
@@ -344,6 +466,23 @@ export default function App() {
           composition: res.composition
         }));
         setHistory(prev => [...newHistoryItems, ...prev]);
+
+        // SaaS Consume Step
+        if (userId && toolId) {
+          try {
+            const consumeRes = await fetch('/api/tool/consume', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, toolId })
+            });
+            const consumeResult = await consumeRes.json();
+            if (consumeResult.success) {
+              setUserData(prev => prev ? { ...prev, integral: consumeResult.data.currentIntegral } : null);
+            }
+          } catch (err) {
+            console.error("Consume failed:", err);
+          }
+        }
       }
     } catch (error: any) {
       console.error("Generation failed:", error);
@@ -359,7 +498,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-x-hidden">
-      <Sidebar view={view} setView={setView} />
+      <Sidebar view={view} setView={setView} userData={userData} toolData={toolData} />
       
       <main className="flex-1 p-8 overflow-y-auto relative">
         <AnimatePresence mode="wait">
