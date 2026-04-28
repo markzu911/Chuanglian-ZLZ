@@ -18,16 +18,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini AI
-const getAIClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Missing GEMINI_API_KEY. Please set it in the Secrets panel.');
-  }
-  return new GoogleGenAI({ apiKey });
-};
+// AI Logic moved to server.ts for security
 
 interface SceneData {
   roomType: string;
@@ -241,23 +233,13 @@ export default function App() {
   const analyzeScene = async (base64: string) => {
     setIsAnalyzingScene(true);
     try {
-      const ai = getAIClient();
-      const base64Data = base64.split(',')[1];
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } },
-            { text: "请分析这张室内房间图片，识别以下特征并以简短的词汇描述：房间类型、装修风格、地板材质、墙面装饰、灯光氛围、房间主色调、现有家具。请以 JSON 格式返回，键名为：roomType, style, floor, wall, lighting, color, furniture。" }
-          ]
-        }],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, type: 'scene' })
       });
-      
-      const data = JSON.parse(response.text);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setSceneData(data);
     } catch (error) {
       console.error("Scene analysis failed:", error);
@@ -269,23 +251,13 @@ export default function App() {
   const analyzeCurtain = async (base64: string) => {
     setIsAnalyzingCurtain(true);
     try {
-      const ai = getAIClient();
-      const base64Data = base64.split(',')[1];
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } },
-            { text: "请分析这张窗帘产品图片，识别其物理特征：颜色、材质属性、纹理、拼接花纹、表面质感。请以 JSON 格式返回，键名为：color, material, texture, pattern, surface。" }
-          ]
-        }],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const res = await fetch('/api/ai/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64, type: 'curtain' })
       });
-      
-      const data = JSON.parse(response.text);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setCurtainData(data);
     } catch (error) {
       console.error("Curtain analysis failed:", error);
@@ -315,7 +287,6 @@ export default function App() {
         }
       } catch (err) {
         console.error("Verify failed:", err);
-        // Relaxed check: if API fails, might still allow for demo purposes but alert developer
       }
     }
     
@@ -328,8 +299,6 @@ export default function App() {
     const generatedResults: Array<{ url: string, composition: string }> = [];
 
     try {
-      const ai = getAIClient();
-
       // Combine SaaS Prompts
       const saasContext = saasConfig?.context ? `\nSaaS Context: ${saasConfig.context}` : "";
       const saasPrompts = saasConfig?.prompt?.length ? `\nSaaS Additional Keywords: ${saasConfig.prompt.join(', ')}` : "";
@@ -369,7 +338,7 @@ export default function App() {
             cream and warm beige monochromatic palette, 
             light catching on fabric ridges, subtle translucency on sheer layer, 
             quiet luxury textile detail, soft atmospheric haze, 
-             macro lens, photorealistic material rendering
+            macro lens, photorealistic material rendering
           `;
         }
 
@@ -434,31 +403,35 @@ export default function App() {
           ];
         }
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3.1-flash-image-preview",
-          contents: [{
-            role: 'user',
-            parts: parts
-          }],
-          config: {
-            imageConfig: {
-              aspectRatio: aspectRatio as any,
-              imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+        const res = await fetch('/api/ai/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            parts,
+            config: {
+              imageConfig: {
+                aspectRatio: aspectRatio as any,
+                imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+              }
             }
-          }
+          })
         });
 
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-          if (part.inlineData) {
-            const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
-            generatedResults.push({ url: generatedUrl, composition: currentComp });
-            break;
+        const response = await res.json();
+        if (response.error) throw new Error(response.error);
+
+        for (const candidate of response.candidates || []) {
+          for (const part of candidate.content?.parts || []) {
+            if (part.inlineData) {
+              const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
+              generatedResults.push({ url: generatedUrl, composition: currentComp });
+              break;
+            }
           }
         }
       }
 
       if (generatedResults.length > 0) {
-        // setResultImage(generatedResults[0].url); // REMOVED: Do not jump/popup automatically
         const newHistoryItems = generatedResults.map(res => ({
           id: `${Date.now()}-${res.composition}`,
           image: res.url,
