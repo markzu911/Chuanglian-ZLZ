@@ -1,0 +1,6 @@
+{
+  "name": "AI 智能窗帘实景渲染",
+  "description": "电商商家专用的窗帘主图场景替换工具，AI 自动识别房间风格并生成高保真渲染效果。",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
