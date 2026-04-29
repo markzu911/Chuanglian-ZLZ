@@ -388,11 +388,17 @@ export default function App() {
           }
         });
 
-        for (const part of response.candidates[0].content.parts) {
-          if (part.inlineData) {
-            const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
-            generatedResults.push({ url: generatedUrl, composition: currentComp });
-            break;
+        // Robust parsing for candidates
+        const candidates = response.candidates;
+        
+        if (candidates && candidates.length > 0) {
+          const parts = candidates[0].content?.parts || [];
+          for (const part of parts) {
+            if (part.inlineData) {
+              const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
+              generatedResults.push({ url: generatedUrl, composition: currentComp });
+              break;
+            }
           }
         }
       }
