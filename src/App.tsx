@@ -265,11 +265,11 @@ export default function App() {
     try {
       const compressedBase64 = await resizeImage(base64);
       const base64Data = compressedBase64.split(',')[1];
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/gemini-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: "gemini-1.5-flash",
+          model: "gemini-3-flash-preview",
           payload: {
             contents: [{
               role: 'user',
@@ -285,6 +285,7 @@ export default function App() {
         })
       });
       const response = await res.json();
+      if (response.error) throw new Error(response.error);
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Analysis failed");
       setSceneData(JSON.parse(text));
@@ -300,11 +301,11 @@ export default function App() {
     try {
       const compressedBase64 = await resizeImage(base64);
       const base64Data = compressedBase64.split(',')[1];
-      const res = await fetch('/api/gemini', {
+      const res = await fetch('/gemini-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: "gemini-1.5-flash",
+          model: "gemini-3-flash-preview",
           payload: {
             contents: [{
               role: 'user',
@@ -320,6 +321,7 @@ export default function App() {
         })
       });
       const response = await res.json();
+      if (response.error) throw new Error(response.error);
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Analysis failed");
       setCurtainData(JSON.parse(text));
@@ -429,11 +431,11 @@ export default function App() {
           ];
         }
 
-        const res = await fetch('/api/gemini', {
+        const res = await fetch('/gemini-proxy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "gemini-1.5-flash",
+            model: "gemini-3.1-flash-image-preview",
             payload: {
               contents: [{ role: 'user', parts }],
               generationConfig: {
@@ -449,11 +451,14 @@ export default function App() {
         const response = await res.json();
         if (response.error) throw new Error(response.error);
 
-        for (const part of response.candidates?.[0]?.content?.parts || []) {
-          if (part.inlineData) {
-            const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
-            generatedResults.push({ url: generatedUrl, composition: currentComp });
-            break;
+        const candidates = response.candidates || [];
+        if (candidates.length > 0) {
+          for (const part of candidates[0].content?.parts || []) {
+            if (part.inlineData) {
+              const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
+              generatedResults.push({ url: generatedUrl, composition: currentComp });
+              break;
+            }
           }
         }
       }
