@@ -22,6 +22,7 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '100mb' }));
+  app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
   // CORS and Iframe headers
   app.use((req, res, next) => {
@@ -53,63 +54,29 @@ async function startServer() {
     }
   };
 
-  // SaaS API Routes
-  app.post("/api/tool/launch", (req, res) => proxyRequest(req, res, "/api/tool/launch"));
-  app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
-  app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
-
-  // AI Routes
-  app.post("/api/ai/analyze", async (req, res) => {
+  // Unified AI Proxy Route
+  app.post("/api/gemini", async (req, res) => {
     try {
-      const { image, type } = req.body;
-      const ai = getAIClient();
-      const base64Data = image.split(',')[1];
-      
-      const prompt = type === 'scene' 
-        ? "请分析这张室内房间图片，识别以下特征并以简短的词汇描述：房间类型、装修风格、地板材质、墙面装饰、灯光氛围、房间主色调、现有家具。请以 JSON 格式返回，键名为：roomType, style, floor, wall, lighting, color, furniture。"
-        : "请分析这张窗帘产品图片，识别其物理特征：颜色、材质属性、纹理、拼接花纹、表面质感。请以 JSON 格式返回，键名为：color, material, texture, pattern, surface。";
-
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } },
-            { text: prompt }
-          ]
-        }],
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      
-      res.json(JSON.parse(response.text));
-    } catch (error: any) {
-      console.error("AI Analysis error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/ai/generate", async (req, res) => {
-    try {
-      const { parts, config } = req.body;
+      const { model, payload } = req.body;
       const ai = getAIClient();
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-image-preview",
-        contents: [{
-          role: 'user',
-          parts: parts
-        }],
-        config: config
+        model: model || "gemini-1.5-flash",
+        contents: payload.contents,
+        config: payload.generationConfig
       });
       
       res.json(response);
     } catch (error: any) {
-      console.error("AI Generation error:", error);
+      console.error("Gemini Proxy Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Keep specific SaaS routes
+  app.post("/api/tool/launch", (req, res) => proxyRequest(req, res, "/api/tool/launch"));
+  app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
+  app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

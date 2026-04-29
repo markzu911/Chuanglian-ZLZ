@@ -230,17 +230,64 @@ export default function App() {
     });
   };
 
+  const resizeImage = (base64Str: string, maxWidth = 1200, maxHeight = 1200): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+    });
+  };
+
   const analyzeScene = async (base64: string) => {
     setIsAnalyzingScene(true);
     try {
-      const res = await fetch('/api/ai/analyze', {
+      const compressedBase64 = await resizeImage(base64);
+      const base64Data = compressedBase64.split(',')[1];
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64, type: 'scene' })
+        body: JSON.stringify({
+          model: "gemini-1.5-flash",
+          payload: {
+            contents: [{
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: "image/jpeg", data: base64Data } },
+                { text: "请分析这张室内房间图片，识别以下特征并以简短的词汇描述：房间类型、装修风格、地板材质、墙面装饰、灯光氛围、房间主色调、现有家具。请以 JSON 格式返回，键名为：roomType, style, floor, wall, lighting, color, furniture。" }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          }
+        })
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setSceneData(data);
+      const response = await res.json();
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Analysis failed");
+      setSceneData(JSON.parse(text));
     } catch (error) {
       console.error("Scene analysis failed:", error);
     } finally {
@@ -251,14 +298,31 @@ export default function App() {
   const analyzeCurtain = async (base64: string) => {
     setIsAnalyzingCurtain(true);
     try {
-      const res = await fetch('/api/ai/analyze', {
+      const compressedBase64 = await resizeImage(base64);
+      const base64Data = compressedBase64.split(',')[1];
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64, type: 'curtain' })
+        body: JSON.stringify({
+          model: "gemini-1.5-flash",
+          payload: {
+            contents: [{
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: "image/jpeg", data: base64Data } },
+                { text: "请分析这张窗帘产品图片，识别其物理特征：颜色、材质属性、纹理、拼接花纹、表面质感。请以 JSON 格式返回，键名为：color, material, texture, pattern, surface。" }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          }
+        })
       });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setCurtainData(data);
+      const response = await res.json();
+      const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Analysis failed");
+      setCurtainData(JSON.parse(text));
     } catch (error) {
       console.error("Curtain analysis failed:", error);
     } finally {
@@ -305,6 +369,15 @@ export default function App() {
 
       for (const currentComp of selectedCompositions) {
         let compositionPrompt = "";
+        
+        // Compress images before sending to AI
+        const compressedScene = await resizeImage(sceneImage);
+        const compressedCurtain = await resizeImage(curtainImage);
+        
+        const sceneData64 = compressedScene.split(',')[1];
+        const curtainData64 = compressedCurtain.split(',')[1];
+
+        // ... (rest of logic)
         if (currentComp === '场景全景') {
           compositionPrompt = `
             High-End Interior Design Showroom Shot — Full Room:
@@ -342,76 +415,32 @@ export default function App() {
           `;
         }
 
-        let finalPrompt = "";
         let parts: any[] = [];
-
         if (currentComp === '材质特写') {
-          finalPrompt = `
-            Generate an extremely high-quality macro detail shot of the provided curtain fabric.
-            
-            Specific Visual Reference (CURTAIN IMAGE):
-            - Material: ${curtainData?.material || 'High-end fabric'}
-            - Color: ${curtainData?.color || 'Original'}
-            - Texture: ${curtainData?.texture || 'Detailed weave'}
-            - Pattern: ${curtainData?.pattern || 'As shown'}
-            
-            Visual Shot Description:
-            ${compositionPrompt}
-            
-            Technical Requirements:
-            - Focus: Sharp on the fabric's micro-fibers and texture.
-            - Quality: 8k resolution, photorealistic, material rendering.
-          `;
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
-            { text: finalPrompt + "\n\nIMPORTANT: Since you are a multimodal model, please describe the final image in extreme detail as if you were an expert prompt engineer, then generate the base64 image data." }
+            { inlineData: { mimeType: "image/jpeg", data: curtainData64 } },
+            { text: `Generate high-quality macro detail shot: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         } else {
-          const isMediumShot = currentComp === '效果中景';
-          const roomPrompt = `
-            Based on the provided scene and curtain details, generate a high-quality rendering image.
-            
-            Scene Details:
-            - Room Type: ${sceneData.roomType}
-            - Style: ${sceneData.style}
-            - Flooring: ${sceneData.floor}
-            - Walls: ${sceneData.wall}
-            - Lighting: ${sceneData.lighting}
-            - Main Colors: ${sceneData.color}
-            - Furniture & Decor (STRICT DYNAMIC MAPPING): ${sceneData.furniture}. The AI MUST recreate the scene using ONLY these items. If items were edited in the text field, reflect those changes in the final image.
-            - Architectural Consistency: ${isMediumShot ? 'Move the camera 1.5m CLOSER to the subject. Maintain ONE continuous room background.' : 'Maintain the original panoramic room framing exactly.'}
-            - GLOBAL SYNTHESIS RULE: Generate ONE single, continuous, and realistic photograph. PROHIBIT all split screens, collage patterns, and vertical/horizontal dividing lines.
-            - Background/Style Context: ${saasContext} ${saasPrompts}
-            
-            Curtain Product Details (ONLY CHANGE IN THE SCENE):
-            - Replace the existing window treatment with curtains featuring:
-            - Material: ${curtainData?.material || 'Curtain fabric'}
-            - Texture: ${curtainData?.texture || 'Smooth'}
-            - Pattern: ${curtainData?.pattern || 'Solid'}
-            - Surface: ${curtainData?.surface || 'Soft'}
-            
-            Rendering Parameters:
-            - Composition: ${compositionPrompt}
-            - Quality: Highly detailed, photorealistic, premium e-commerce lifestyle photography, 8k resolution.
-            - Lighting Consistency: The lighting on the curtains and any added model MUST perfectly match the ambient lighting of the original scene.
-          `;
-          finalPrompt = roomPrompt;
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: sceneImage.split(',')[1] } },
-            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
-            { text: finalPrompt + "\n\nIMPORTANT: Since you are a multimodal model, please describe the final image in extreme detail as if you were an expert prompt engineer, then generate the base64 image data." }
+            { inlineData: { mimeType: "image/jpeg", data: sceneData64 } },
+            { inlineData: { mimeType: "image/jpeg", data: curtainData64 } },
+            { text: `Generate photorealistic interior render: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         }
 
-        const res = await fetch('/api/ai/generate', {
+        const res = await fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            parts,
-            config: {
-              imageConfig: {
-                aspectRatio: aspectRatio as any,
-                imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+            model: "gemini-1.5-flash",
+            payload: {
+              contents: [{ role: 'user', parts }],
+              generationConfig: {
+                imageConfig: {
+                  aspectRatio: aspectRatio as any,
+                  imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+                }
               }
             }
           })
@@ -420,13 +449,11 @@ export default function App() {
         const response = await res.json();
         if (response.error) throw new Error(response.error);
 
-        for (const candidate of response.candidates || []) {
-          for (const part of candidate.content?.parts || []) {
-            if (part.inlineData) {
-              const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
-              generatedResults.push({ url: generatedUrl, composition: currentComp });
-              break;
-            }
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
+            generatedResults.push({ url: generatedUrl, composition: currentComp });
+            break;
           }
         }
       }
