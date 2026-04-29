@@ -265,7 +265,7 @@ export default function App() {
     try {
       const compressedBase64 = await resizeImage(base64);
       const base64Data = compressedBase64.split(',')[1];
-      const res = await fetch('/gemini-proxy', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -301,7 +301,7 @@ export default function App() {
     try {
       const compressedBase64 = await resizeImage(base64);
       const base64Data = compressedBase64.split(',')[1];
-      const res = await fetch('/gemini-proxy', {
+      const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -379,7 +379,6 @@ export default function App() {
         const sceneData64 = compressedScene.split(',')[1];
         const curtainData64 = compressedCurtain.split(',')[1];
 
-        // ... (rest of logic)
         if (currentComp === '场景全景') {
           compositionPrompt = `
             High-End Interior Design Showroom Shot — Full Room:
@@ -431,7 +430,7 @@ export default function App() {
           ];
         }
 
-        const res = await fetch('/gemini-proxy', {
+        const res = await fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

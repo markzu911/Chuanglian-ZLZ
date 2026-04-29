@@ -61,8 +61,8 @@ async function startServer() {
   };
 
   // Unified AI Proxy Route
-  app.post("/gemini-proxy", async (req, res) => {
-    console.log("Received request to /gemini-proxy");
+  app.post("/api/gemini", async (req, res) => {
+    console.log("Received request to /api/gemini");
     try {
       const { model, payload } = req.body;
       const ai = getAIClient();
