@@ -22,13 +22,6 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json({ limit: '100mb' }));
-  app.use(express.urlencoded({ limit: '100mb', extended: true }));
-
-  // GLOBAL LOGGER for debugging
-  app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Content-Length: ${req.headers['content-length']}`);
-    next();
-  });
 
   // CORS and Iframe headers
   app.use((req, res, next) => {
@@ -62,13 +55,12 @@ async function startServer() {
 
   // Unified AI Proxy Route
   app.post("/api/gemini", async (req, res) => {
-    console.log("Received request to /api/gemini");
     try {
       const { model, payload } = req.body;
       const ai = getAIClient();
       
       const response = await ai.models.generateContent({
-        model: model || "gemini-3-flash-preview",
+        model: model || "gemini-1.5-flash",
         contents: payload.contents,
         config: payload.generationConfig
       });
@@ -78,10 +70,6 @@ async function startServer() {
       console.error("Gemini Proxy Error:", error);
       res.status(500).json({ error: error.message });
     }
-  });
-
-  app.get("/api/ping", (req, res) => {
-    res.json({ pong: true, timestamp: new Date().toISOString() });
   });
 
   // Keep specific SaaS routes

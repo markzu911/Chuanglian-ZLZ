@@ -230,46 +230,15 @@ export default function App() {
     });
   };
 
-  const resizeImage = (base64Str: string, maxWidth = 1200, maxHeight = 1200): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = base64Str;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxWidth) {
-            height *= maxWidth / width;
-            width = maxWidth;
-          }
-        } else {
-          if (height > maxHeight) {
-            width *= maxHeight / height;
-            height = maxHeight;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-    });
-  };
-
   const analyzeScene = async (base64: string) => {
     setIsAnalyzingScene(true);
     try {
-      const compressedBase64 = await resizeImage(base64);
-      const base64Data = compressedBase64.split(',')[1];
+      const base64Data = base64.split(',')[1];
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: "gemini-3-flash-preview",
+          model: "gemini-1.5-flash",
           payload: {
             contents: [{
               role: 'user',
@@ -285,7 +254,6 @@ export default function App() {
         })
       });
       const response = await res.json();
-      if (response.error) throw new Error(response.error);
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Analysis failed");
       setSceneData(JSON.parse(text));
@@ -299,13 +267,12 @@ export default function App() {
   const analyzeCurtain = async (base64: string) => {
     setIsAnalyzingCurtain(true);
     try {
-      const compressedBase64 = await resizeImage(base64);
-      const base64Data = compressedBase64.split(',')[1];
+      const base64Data = base64.split(',')[1];
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: "gemini-3-flash-preview",
+          model: "gemini-1.5-flash",
           payload: {
             contents: [{
               role: 'user',
@@ -321,7 +288,6 @@ export default function App() {
         })
       });
       const response = await res.json();
-      if (response.error) throw new Error(response.error);
       const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) throw new Error("Analysis failed");
       setCurtainData(JSON.parse(text));
@@ -371,14 +337,7 @@ export default function App() {
 
       for (const currentComp of selectedCompositions) {
         let compositionPrompt = "";
-        
-        // Compress images before sending to AI
-        const compressedScene = await resizeImage(sceneImage);
-        const compressedCurtain = await resizeImage(curtainImage);
-        
-        const sceneData64 = compressedScene.split(',')[1];
-        const curtainData64 = compressedCurtain.split(',')[1];
-
+        // ... (prompts logic remains the same)
         if (currentComp === '场景全景') {
           compositionPrompt = `
             High-End Interior Design Showroom Shot — Full Room:
@@ -419,13 +378,13 @@ export default function App() {
         let parts: any[] = [];
         if (currentComp === '材质特写') {
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: curtainData64 } },
+            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
             { text: `Generate high-quality macro detail shot: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         } else {
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: sceneData64 } },
-            { inlineData: { mimeType: "image/jpeg", data: curtainData64 } },
+            { inlineData: { mimeType: "image/jpeg", data: sceneImage.split(',')[1] } },
+            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
             { text: `Generate photorealistic interior render: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         }
@@ -434,7 +393,7 @@ export default function App() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: "gemini-3.1-flash-image-preview",
+            model: "gemini-1.5-flash",
             payload: {
               contents: [{ role: 'user', parts }],
               generationConfig: {
@@ -450,14 +409,11 @@ export default function App() {
         const response = await res.json();
         if (response.error) throw new Error(response.error);
 
-        const candidates = response.candidates || [];
-        if (candidates.length > 0) {
-          for (const part of candidates[0].content?.parts || []) {
-            if (part.inlineData) {
-              const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
-              generatedResults.push({ url: generatedUrl, composition: currentComp });
-              break;
-            }
+        for (const part of response.candidates?.[0]?.content?.parts || []) {
+          if (part.inlineData) {
+            const generatedUrl = `data:image/png;base64,${part.inlineData.data}`;
+            generatedResults.push({ url: generatedUrl, composition: currentComp });
+            break;
           }
         }
       }
