@@ -44,54 +44,90 @@ const Sidebar = ({ view, setView, userData, toolData }: {
   userData: { name: string, integral: number } | null,
   toolData: { name: string, integral: number } | null
 }) => (
-  <div className="w-64 bg-white border-r border-slate-200 flex flex-col h-screen sticky top-0 p-6 z-20">
-    <div className="flex items-center gap-2 mb-10 cursor-pointer" onClick={() => setView('editor')}>
-      <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
-        <Layers size={18} />
-      </div>
-      <h1 className="font-bold text-slate-800 tracking-tight">智能窗帘生成</h1>
-    </div>
-    
-    <nav className="space-y-2 flex-1">
-      <button 
-        onClick={() => setView('editor')}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${view === 'editor' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'}`}
-      >
-        <Plus size={18} />
-        <span>开始创作</span>
-      </button>
-      <button 
-        onClick={() => setView('history')}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${view === 'history' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'}`}
-      >
-        <History size={18} />
-        <span>历史记录</span>
-      </button>
-    </nav>
-    
-    {userData && (
-      <div className="mt-auto pt-6 border-t border-slate-100">
-        <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
-          <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-            <span>用户账户</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-slate-500">{userData.name}</span>
-            <div className="flex items-center gap-1">
-              <Sparkles size={10} className="text-blue-500" />
-              <span className="text-xs text-blue-600 font-bold">{userData.integral}</span>
-            </div>
-          </div>
-          {toolData && (
-            <div className="pt-2 border-t border-slate-200/50 flex justify-between items-center">
-              <span className="text-[10px] text-slate-400">单次渲染</span>
-              <span className="text-[10px] text-slate-500 font-bold">{toolData.integral} 积分</span>
-            </div>
-          )}
+  <>
+    {/* Desktop Sidebar */}
+    <div className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col h-screen sticky top-0 p-6 z-20">
+      <div className="flex items-center gap-2 mb-10 cursor-pointer" onClick={() => setView('editor')}>
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+          <Layers size={18} />
         </div>
+        <h1 className="font-bold text-slate-800 tracking-tight">智能窗帘生成</h1>
       </div>
-    )}
-  </div>
+      
+      <nav className="space-y-2 flex-1">
+        <button 
+          onClick={() => setView('editor')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${view === 'editor' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'}`}
+        >
+          <Plus size={18} />
+          <span>开始创作</span>
+        </button>
+        <button 
+          onClick={() => setView('history')}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${view === 'history' ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50'}`}
+        >
+          <History size={18} />
+          <span>历史记录</span>
+        </button>
+      </nav>
+      
+      {userData && (
+        <div className="mt-auto pt-6 border-t border-slate-100">
+          <div className="bg-slate-50 p-4 rounded-2xl space-y-2">
+            <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span>用户账户</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-slate-500 truncate mr-2">{userData.name}</span>
+              <div className="flex items-center gap-1 shrink-0">
+                <Sparkles size={10} className="text-blue-500" />
+                <span className="text-xs text-blue-600 font-bold">{userData.integral}</span>
+              </div>
+            </div>
+            {toolData && (
+              <div className="pt-2 border-t border-slate-200/50 flex justify-between items-center">
+                <span className="text-[10px] text-slate-400">单次渲染</span>
+                <span className="text-[10px] text-slate-500 font-bold">{toolData.integral} 积分</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Mobile Bottom Navigation */}
+    <div className="md:hidden fixed bottom-6 left-6 right-6 z-50">
+      <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-3xl p-2 flex items-center justify-between">
+        <button 
+          onClick={() => setView('editor')}
+          className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-2xl transition-all ${view === 'editor' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}
+        >
+          <Plus size={20} />
+          <span className="text-[10px] font-bold">开始创作</span>
+        </button>
+        <div className="w-px h-6 bg-slate-100" />
+        <button 
+          onClick={() => setView('history')}
+          className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 rounded-2xl transition-all ${view === 'history' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400'}`}
+        >
+          <History size={20} />
+          <span className="text-[10px] font-bold">历史记录</span>
+        </button>
+        {userData && (
+          <>
+            <div className="w-px h-6 bg-slate-100" />
+            <div className="px-4 flex flex-col items-center">
+              <div className="flex items-center gap-1">
+                <Sparkles size={12} className="text-blue-600" />
+                <span className="text-xs font-bold text-slate-800">{userData.integral}</span>
+              </div>
+              <span className="text-[8px] text-slate-400 font-medium">可用积分</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  </>
 );
 
 const SectionTitle = ({ number, title, subtitle }: { number: string; title: string; subtitle: string }) => (
@@ -488,10 +524,17 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-900 overflow-x-hidden">
       <Sidebar view={view} setView={setView} userData={userData} toolData={toolData} />
       
-      <main className="flex-1 p-8 overflow-y-auto relative">
+      <main className="flex-1 p-4 sm:p-8 overflow-y-auto relative pb-32 md:pb-8">
+        <div className="md:hidden flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+            <Layers size={18} />
+          </div>
+          <h1 className="font-bold text-slate-800 tracking-tight">智能窗帘生成</h1>
+        </div>
+        
         <AnimatePresence mode="wait">
           {view === 'editor' ? (
             <motion.div 
@@ -508,7 +551,7 @@ export default function App() {
                     title="场景分析" 
                     subtitle="AI 自动识别房间风格与布局" 
                   />
-                  <div className="bg-slate-100 p-8 rounded-[40px] relative group">
+                  <div className="bg-slate-100 p-4 sm:p-8 rounded-[30px] sm:rounded-[40px] relative group">
                     <input 
                       type="file" 
                       ref={fileInputRef} 
@@ -559,7 +602,7 @@ export default function App() {
                     title="窗帘产品" 
                     subtitle="上传对应窗帘，我们将提取其物理特征" 
                   />
-                  <div className="bg-slate-100 p-8 rounded-[40px] relative">
+                  <div className="bg-slate-100 p-4 sm:p-8 rounded-[30px] sm:rounded-[40px] relative">
                     <input 
                       type="file" 
                       ref={curtainInputRef} 
@@ -632,7 +675,7 @@ export default function App() {
                     title="环境特征" 
                     subtitle="微调房间氛围，AI将智能协调光感" 
                   />
-                  <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 grid grid-cols-2 gap-x-8 gap-y-6">
+                  <div className="bg-white p-6 sm:p-10 rounded-[30px] sm:rounded-[40px] shadow-sm border border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
                     {[
                       { label: "房间类型", key: "roomType", placeholder: "如：主卧、亲子房" },
                       { label: "装修风格", key: "style", placeholder: "如：奶油风、轻奢" },
@@ -652,7 +695,7 @@ export default function App() {
                         />
                       </div>
                     ))}
-                    <div className="col-span-2 space-y-2">
+                    <div className="col-span-1 sm:col-span-2 space-y-2">
                       <label className="text-xs font-semibold text-slate-400">现有家具（输入多个家具，用逗号或空格分隔）</label>
                       <input 
                         type="text" 
@@ -671,10 +714,10 @@ export default function App() {
                     title="渲染参数" 
                     subtitle="" 
                   />
-                  <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-10">
+                  <div className="bg-white p-6 sm:p-10 rounded-[30px] sm:rounded-[40px] shadow-sm border border-slate-100 space-y-10">
                     <div className="space-y-4">
                       <label className="text-xs font-semibold text-slate-400">拍摄比例</label>
-                      <div className="grid grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                         {['1:1', '3:4', '4:3', '16:9'].map(ratio => (
                           <button 
                             key={ratio}
@@ -691,7 +734,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-x-12">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-10">
                       <div className="space-y-4">
                         <label className="text-xs font-semibold text-slate-400">渲染画质</label>
                         <div className="flex gap-2">
@@ -774,14 +817,14 @@ export default function App() {
               exit={{ opacity: 0, x: -20 }}
               className="max-w-7xl mx-auto"
             >
-              <div className="flex justify-between items-center mb-10">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-800">历史生成记录</h2>
-                  <p className="text-slate-400 mt-2">在这里您可以查看并下载过往的所有渲染作品</p>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">历史生成记录</h2>
+                  <p className="text-slate-400 mt-2 text-sm">在这里您可以查看并下载过往的所有渲染作品</p>
                 </div>
                 <button 
                   onClick={() => setView('editor')}
-                  className="bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
                 >
                   <Plus size={18} />
                   <span>新建渲染</span>
