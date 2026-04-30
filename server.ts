@@ -58,6 +58,25 @@ async function startServer() {
   app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
   app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
 
+  // Unified AI Proxy Route
+  app.post("/api/gemini", async (req, res) => {
+    try {
+      const { model, payload } = req.body;
+      const ai = getAIClient();
+      
+      const response = await ai.models.generateContent({
+        model: model || "gemini-1.5-flash",
+        contents: payload.contents,
+        config: payload.generationConfig || payload.config
+      });
+      
+      res.json(response);
+    } catch (error: any) {
+      console.error("Gemini Proxy Error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

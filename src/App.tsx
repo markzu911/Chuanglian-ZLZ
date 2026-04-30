@@ -18,10 +18,6 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize Gemini AI
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 interface SceneData {
   roomType: string;
@@ -236,19 +232,26 @@ export default function App() {
     setIsAnalyzingScene(true);
     try {
       const base64Data = base64.split(',')[1];
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } },
-            { text: "请分析这张室内房间图片，识别以下特征并以简短的词汇描述：房间类型、装修风格、地板材质、墙面装饰、灯光氛围、房间主色调、现有家具。请以 JSON 格式返回，键名为：roomType, style, floor, wall, lighting, color, furniture。" }
-          ]
-        }],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: "gemini-3-flash-preview",
+          payload: {
+            contents: [{
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: "image/jpeg", data: base64Data } },
+                { text: "请分析这张室内房间图片，识别以下特征并以简短的词汇描述：房间类型、装修风格、地板材质、墙面装饰、灯光氛围、房间主色调、现有家具。请以 JSON 格式返回，键名为：roomType, style, floor, wall, lighting, color, furniture。" }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          }
+        })
       });
+      const response = await res.json();
       
       if (!response.text) throw new Error("Analysis failed");
       setSceneData(JSON.parse(response.text));
@@ -263,19 +266,26 @@ export default function App() {
     setIsAnalyzingCurtain(true);
     try {
       const base64Data = base64.split(',')[1];
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: [{
-          role: 'user',
-          parts: [
-            { inlineData: { mimeType: "image/jpeg", data: base64Data } },
-            { text: "请分析这张窗帘产品图片，识别其物理特征：颜色、材质属性、纹理、拼接花纹、表面质感。请以 JSON 格式返回，键名为：color, material, texture, pattern, surface。" }
-          ]
-        }],
-        config: {
-          responseMimeType: "application/json"
-        }
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: "gemini-3-flash-preview",
+          payload: {
+            contents: [{
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType: "image/jpeg", data: base64Data } },
+                { text: "请分析这张窗帘产品图片，识别其物理特征：颜色、材质属性、纹理、拼接花纹、表面质感。请以 JSON 格式返回，键名为：color, material, texture, pattern, surface。" }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: "application/json"
+            }
+          }
+        })
       });
+      const response = await res.json();
       
       if (!response.text) throw new Error("Analysis failed");
       setCurtainData(JSON.parse(response.text));
@@ -377,16 +387,24 @@ export default function App() {
           ];
         }
 
-        const response = await ai.models.generateContent({
-          model: "gemini-3.1-flash-image-preview",
-          contents: [{ role: 'user', parts }],
-          config: {
-            imageConfig: {
-              aspectRatio: aspectRatio as any,
-              imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+        const res = await fetch('/api/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: "gemini-3.1-flash-image-preview",
+            payload: {
+              contents: [{ role: 'user', parts }],
+              generationConfig: {
+                imageConfig: {
+                  aspectRatio: aspectRatio as any,
+                  imageSize: quality === '4K' ? '4K' : (quality === '2K' ? '2K' : '1K')
+                }
+              }
             }
-          }
+          })
         });
+
+        const response = await res.json();
 
         // Robust parsing for candidates
         const candidates = response.candidates;
