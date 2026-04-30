@@ -133,10 +133,10 @@ const Sidebar = ({ view, setView, userData, toolData }: {
 const SectionTitle = ({ number, title, subtitle }: { number: string; title: string; subtitle: string }) => (
   <div className="mb-6">
     <div className="flex items-baseline gap-2">
-      <span className="text-xl font-bold text-slate-800">{number}.</span>
-      <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+      <span className="text-lg sm:text-xl font-bold text-slate-800 shrink-0">{number}.</span>
+      <h2 className="text-lg sm:text-xl font-bold text-slate-800">{title}</h2>
     </div>
-    {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+    {subtitle && <p className="text-slate-400 text-xs sm:text-sm mt-1 leading-relaxed">{subtitle}</p>}
   </div>
 );
 
@@ -650,17 +650,17 @@ export default function App() {
                         if (curtainImage) analyzeCurtain(curtainImage);
                       }}
                       disabled={!sceneImage || !curtainImage || isAnalyzingScene || isAnalyzingCurtain}
-                      className="w-full mt-6 bg-blue-600 text-white rounded-2xl py-4 flex items-center justify-center gap-2 font-bold hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="w-full mt-6 bg-blue-600 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 flex items-center justify-center gap-2 text-sm sm:text-base font-bold hover:bg-blue-700 transition-all active:scale-[0.98] disabled:opacity-50"
                     >
                       {isAnalyzingScene || isAnalyzingCurtain ? (
                         <>
-                          <Loader2 size={18} className="animate-spin" />
+                          <Loader2 size={16} className="animate-spin" />
                           <span>正在分析图像特征...</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles size={18} />
-                          <span>分析图像</span>
+                          <Sparkles size={16} />
+                          <span>02. 开始智能分析</span>
                         </>
                       )}
                     </button>
@@ -781,19 +781,19 @@ export default function App() {
                     <button 
                       onClick={handleGenerate}
                       disabled={isGenerating || !sceneImage || !curtainImage}
-                      className="w-full bg-slate-900 text-white rounded-2xl py-6 flex items-center justify-center gap-3 font-bold hover:bg-slate-800 transition-all active:scale-[0.98] mt-4 disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden relative"
+                      className="w-full bg-slate-900 text-white rounded-xl sm:rounded-2xl py-4 sm:py-6 flex items-center justify-center gap-2 sm:gap-3 text-sm sm:text-base font-bold hover:bg-slate-800 transition-all active:scale-[0.98] mt-4 disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden relative"
                     >
                       {isGenerating ? (
                         <>
-                          <Loader2 size={20} className="animate-spin text-blue-400" />
+                          <Loader2 size={18} className="animate-spin text-blue-400" />
                           <span className="tracking-widest">
                             正在生成 ({history.length > 0 && selectedCompositions.length > 1 ? `队列处理中` : '实景渲染引擎'}... )
                           </span>
                         </>
                       ) : (
                         <>
-                          <Sparkles size={20} className="text-blue-400 group-hover:scale-125 transition-transform" />
-                          <span className="tracking-widest">05. 开启实景渲染</span>
+                          <Sparkles size={18} className="text-blue-400 group-hover:scale-125 transition-transform" />
+                          <span className="tracking-widest capitalize">05. 开启实景渲染</span>
                         </>
                       )}
                       {isGenerating && (
