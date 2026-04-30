@@ -54,11 +54,6 @@ async function startServer() {
     }
   };
 
-  // Keep specific SaaS routes
-  app.post("/api/tool/launch", (req, res) => proxyRequest(req, res, "/api/tool/launch"));
-  app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
-  app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
-
   // Unified AI Proxy Route
   app.post("/api/gemini", async (req, res) => {
     try {
@@ -71,12 +66,21 @@ async function startServer() {
         config: payload.generationConfig || payload.config
       });
       
-      res.json(response);
+      // Send only the text and relevant data to frontend to avoid serialization issues
+      res.json({ 
+        text: response.text, 
+        candidates: response.candidates 
+      });
     } catch (error: any) {
       console.error("Gemini Proxy Error:", error);
       res.status(500).json({ error: error.message });
     }
   });
+
+  // Keep specific SaaS routes
+  app.post("/api/tool/launch", (req, res) => proxyRequest(req, res, "/api/tool/launch"));
+  app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
+  app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
