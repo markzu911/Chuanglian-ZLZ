@@ -228,10 +228,34 @@ export default function App() {
     });
   };
 
+  const compressImage = (base64Str: string, maxWidth = 1200, quality = 0.7): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+    });
+  };
+
   const analyzeScene = async (base64: string) => {
     setIsAnalyzingScene(true);
     try {
-      const base64Data = base64.split(',')[1];
+      const compressed = await compressImage(base64);
+      const base64Data = compressed.split(',')[1];
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -265,7 +289,8 @@ export default function App() {
   const analyzeCurtain = async (base64: string) => {
     setIsAnalyzingCurtain(true);
     try {
-      const base64Data = base64.split(',')[1];
+      const compressed = await compressImage(base64);
+      const base64Data = compressed.split(',')[1];
       const res = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -374,15 +399,18 @@ export default function App() {
         }
 
         let parts: any[] = [];
+        const compressedScene = sceneImage ? await compressImage(sceneImage) : null;
+        const compressedCurtain = curtainImage ? await compressImage(curtainImage) : null;
+
         if (currentComp === '材质特写') {
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
+            { inlineData: { mimeType: "image/jpeg", data: compressedCurtain!.split(',')[1] } },
             { text: `Generate high-quality macro detail shot: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         } else {
           parts = [
-            { inlineData: { mimeType: "image/jpeg", data: sceneImage.split(',')[1] } },
-            { inlineData: { mimeType: "image/jpeg", data: curtainImage.split(',')[1] } },
+            { inlineData: { mimeType: "image/jpeg", data: compressedScene!.split(',')[1] } },
+            { inlineData: { mimeType: "image/jpeg", data: compressedCurtain!.split(',')[1] } },
             { text: `Generate photorealistic interior render: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
           ];
         }
