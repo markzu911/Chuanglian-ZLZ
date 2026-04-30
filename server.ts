@@ -66,10 +66,9 @@ async function startServer() {
         config: payload.generationConfig || payload.config
       });
       
-      // Send only the text and relevant data to frontend to avoid serialization issues
-      res.json({ 
-        text: response.text, 
-        candidates: response.candidates 
+      res.json({
+        text: response.text,
+        candidates: response.candidates
       });
     } catch (error: any) {
       console.error("Gemini Proxy Error:", error);
