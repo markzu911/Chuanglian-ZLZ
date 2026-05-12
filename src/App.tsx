@@ -505,6 +505,23 @@ export default function App() {
             const consumeResult = await consumeRes.json();
             if (consumeResult.success) {
               setUserData(prev => prev ? { ...prev, integral: consumeResult.data.currentIntegral } : null);
+              
+              // Upload generated images to SaaS
+              for (const result of generatedResults) {
+                try {
+                  await fetch('/api/upload/image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId,
+                      base64: result.url,
+                      source: 'result'
+                    })
+                  });
+                } catch (uploadErr) {
+                  console.error("Image upload to SaaS failed:", uploadErr);
+                }
+              }
             }
           } catch (err) {
             console.error("Consume failed:", err);

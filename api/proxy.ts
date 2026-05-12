@@ -39,21 +39,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // 2. 处理 SaaS 平台工具接口转发 (/api/tool/*)
-    if (url.includes('/api/tool/')) {
-      // 提取 tool/ 之后的路径
-      const match = url.match(/\/api\/tool\/(.+)/);
-      if (!match) return res.status(404).json({ error: "Invalid tool path" });
+    // 2. 处理 SaaS 平台工具接口转发 (/api/tool/*, /api/upload/*, /api/coze/*)
+    const isSaasPath = url.includes('/api/tool/') || url.includes('/api/upload/') || url.includes('/api/coze/');
+
+    if (isSaasPath) {
+      const match = url.match(/\/api\/(tool|upload|coze)\/(.+)/);
+      if (!match) return res.status(404).json({ error: "Invalid SaaS proxy path" });
       
-      const targetPath = match[1];
-      console.log("Proxying to SaaS tool:", targetPath);
+      const type = match[1];
+      const targetPath = match[2];
+      const finalUrl = `http://aibigtree.com/api/${type}/${targetPath}`;
+      console.log(`Proxying ${req.method} to SaaS:`, finalUrl);
       
-      const saasResponse = await axios.post(`http://aibigtree.com/api/tool/${targetPath}`, req.body, {
+      const saasResponse = await axios({
+        method: req.method as any,
+        url: finalUrl,
+        data: req.method === 'GET' ? undefined : req.body,
+        params: req.method === 'GET' ? req.query : undefined,
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000
       });
       
-      return res.status(200).json(saasResponse.data);
+      return res.status(saasResponse.status).json(saasResponse.data);
     }
 
     return res.status(404).json({ error: `Not Found: ${url}` });

@@ -42,10 +42,12 @@ async function startServer() {
     const targetUrl = `http://aibigtree.com${targetPath}`;
     try {
       const response = await axios({
-        method: req.method,
+        method: req.method as any,
         url: targetUrl,
-        data: req.body,
-        headers: { 'Content-Type': 'application/json' }
+        data: req.method === 'GET' ? undefined : req.body,
+        params: req.method === 'GET' ? req.query : undefined,
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 10000
       });
       res.status(response.status).json(response.data);
     } catch (error: any) {
@@ -76,10 +78,10 @@ async function startServer() {
     }
   });
 
-  // Keep specific SaaS routes
-  app.post("/api/tool/launch", (req, res) => proxyRequest(req, res, "/api/tool/launch"));
-  app.post("/api/tool/verify", (req, res) => proxyRequest(req, res, "/api/tool/verify"));
-  app.post("/api/tool/consume", (req, res) => proxyRequest(req, res, "/api/tool/consume"));
+  // SaaS routes
+  app.all("/api/tool/*", (req, res) => proxyRequest(req, res, req.path));
+  app.all("/api/upload/*", (req, res) => proxyRequest(req, res, req.path));
+  app.all("/api/coze/*", (req, res) => proxyRequest(req, res, req.path));
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
