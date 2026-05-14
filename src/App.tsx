@@ -506,16 +506,18 @@ export default function App() {
             if (consumeResult.success) {
               setUserData(prev => prev ? { ...prev, integral: consumeResult.data.currentIntegral } : null);
               
-              // Upload generated images to SaaS
+              // Upload generated images to SaaS using standard flow (Backend Proxy)
               for (const result of generatedResults) {
                 try {
-                  await fetch('/api/upload/image', {
+                  await fetch('/api/upload-result', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
-                      base64: result.url,
-                      source: 'result'
+                      toolId,
+                      imageBase64: result.url,
+                      source: 'result',
+                      fileName: `render-${result.composition}.png`
                     })
                   });
                 } catch (uploadErr) {

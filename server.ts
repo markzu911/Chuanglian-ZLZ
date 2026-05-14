@@ -78,6 +78,44 @@ async function startServer() {
     }
   });
 
+  // Handle standard SaaS result image preservation flow (Request Token -> PUT OSS -> Commit)
+  app.post("/api/upload-result", async (req, res) => {
+    const { userId, toolId, imageBase64, mimeType, fileName } = req.body;
+    
+    if (!userId || !toolId || !imageBase64) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const SAAS_BASE = "http://aibigtree.com";
+    const imageBuffer = Buffer.from(imageBase64.split(',')[1], 'base64');
+
+    try {
+      // 1. Request OSS Token
+      const tokenRes = await axios.post(`${SAAS_BASE}/api/upload/direct-token`, {
+        userId, toolId, source: 'result', mimeType: mimeType || 'image/png', fileName: fileName || 'result.png', fileSize: imageBuffer.length
+      }, { timeout: 15000 });
+      if (!tokenRes.data.success) throw new Error(tokenRes.data.error || "Token request failed");
+
+      const { uploadUrl, objectKey, headers } = tokenRes.data;
+
+      // 2. Upload to OSS (PUT)
+      await axios.put(uploadUrl, imageBuffer, {
+        headers: { ...headers, 'Content-Length': imageBuffer.length },
+        timeout: 30000
+      });
+
+      // 3. Commit to database
+      const commitRes = await axios.post(`${SAAS_BASE}/api/upload/commit`, {
+        userId, toolId, source: 'result', objectKey, fileSize: imageBuffer.length
+      }, { timeout: 15000 });
+
+      res.json(commitRes.data);
+    } catch (err: any) {
+      console.error("SaaS Upload Result Error:", err.message);
+      res.status(500).json({ error: err.message, details: err.response?.data });
+    }
+  });
+
   // SaaS routes
   app.all("/api/tool/*", (req, res) => proxyRequest(req, res, req.path));
   app.all("/api/upload/*", (req, res) => proxyRequest(req, res, req.path));
