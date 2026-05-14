@@ -506,22 +506,66 @@ export default function App() {
             if (consumeResult.success) {
               setUserData(prev => prev ? { ...prev, integral: consumeResult.data.currentIntegral } : null);
               
-              // Upload generated images to SaaS using standard flow (Backend Proxy)
+              // Upload generated images to SaaS using standard direct-upload flow
+              const base64ToBlob = (base64: string) => {
+                const parts = base64.split(';base64,');
+                const contentType = parts[0].split(':')[1];
+                const raw = window.atob(parts[1]);
+                const rawLength = raw.length;
+                const uInt8Array = new Uint8Array(rawLength);
+                for (let i = 0; i < rawLength; ++i) {
+                  uInt8Array[i] = raw.charCodeAt(i);
+                }
+                return new Blob([uInt8Array], { type: contentType });
+              };
+
               for (const result of generatedResults) {
                 try {
-                  await fetch('/api/upload-result', {
+                  // 1. Get Direct Token
+                  const tokenRes = await fetch('/api/upload/direct-token', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       userId,
                       toolId,
-                      imageBase64: result.url,
                       source: 'result',
+                      mimeType: 'image/png',
                       fileName: `render-${result.composition}.png`
                     })
                   });
+                  const tokenData = await tokenRes.json();
+                  
+                  if (tokenData.success && tokenData.uploadUrl) {
+                    const blob = base64ToBlob(result.url);
+                    
+                    // 2. Direct PUT to OSS
+                    const uploadHeaders: Record<string, string> = {};
+                    if (tokenData.headers) {
+                      Object.assign(uploadHeaders, tokenData.headers);
+                    }
+                    
+                    await fetch(tokenData.uploadUrl, {
+                      method: 'PUT',
+                      headers: uploadHeaders,
+                      body: blob
+                    });
+
+                    // 3. Commit to SaaS
+                    await fetch('/api/upload/commit', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userId,
+                        toolId,
+                        source: 'result',
+                        objectKey: tokenData.objectKey,
+                        fileSize: blob.size
+                      })
+                    });
+                    console.log(`Image ${result.composition} uploaded and committed successfully.`);
+                  }
                 } catch (uploadErr) {
-                  console.error("Image upload to SaaS failed:", uploadErr);
+                  console.error("Image direct upload flow failed:", uploadErr);
                 }
               }
             }
