@@ -411,13 +411,12 @@ export default function App() {
           `;
         } else if (currentComp === '效果中景') {
           compositionPrompt = `
-            High-End Lifestyle Interior Photography — SINGLE CAMERA VIEW (深度中景):
-            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. PROHIBIT any split-screens, before/after lines, or collage patterns. ${saasContext}
-            - [CAMERA MAGNIFICATION]: Simulate a physical camera move CLOSER (zoom in) by 1.5 meters. The focus remains on the specific window and curtains from the source. ${saasPrompts}
-            - [MODEL SOLIDITY]: The model MUST be a 100% OPAQUE, SOLID human figure. Her hand MUST be anatomically attached to her arm and body. NO ghosting, NO fading, NO transparency.
-            - [SHADOW LOGIC]: The model must cast a realistic, integrated shadow onto the curtain and floor to prove physical presence.
-            - [ERROR PREVENTION]: NO second model. NO floating limbs. NO vertical dividing lines in the background. The background architecture MUST be ONE continuous surface without "jumps" in perspective.
-            - Model Detail: East Asian female, elegant side profile, chic beige tweed jacket. She is interacting with the ${curtainData?.texture || 'textile'} curtain naturally.
+            High-End Lifestyle Interior Photography — MID-RANGE SHOT (效果中景):
+            - [CRITICAL]: REPLACE any existing curtains in the window area with the NEW curtain from the product image. 
+            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. PROHIBIT any split-screens or collage patterns. ${saasContext}
+            - [CAMERA VIEW]: Move CLOSER (zoom in) to focus on the window and the NEW curtain. Capture the folds and drape from a medium distance. ${saasPrompts}
+            - [PRODUCT FOCUS]: Showcase the ${curtainData?.material || 'textile'} texture and color from the reference image. The curtain should be the visual protagonist.
+            - Model Detail: East Asian female, elegant side profile. She is naturally interacting with the NEW ${curtainData?.texture || 'textile'} curtain.
           `;
         } else if (currentComp === '材质特写') {
           compositionPrompt = `
@@ -447,7 +446,7 @@ export default function App() {
           parts = [
             { inlineData: { mimeType: "image/jpeg", data: compressedScene!.split(',')[1] } },
             { inlineData: { mimeType: "image/jpeg", data: compressedCurtain!.split(',')[1] } },
-            { text: `Generate photorealistic interior render: ${compositionPrompt}\n\nIMPORTANT: Describe image first then generate base64.` }
+            { text: `TASK: Replace the existing curtains in the first image with the product shown in the second image.\n\nPROMPT: ${compositionPrompt}\n\nIMPORTANT: Use the second image as the ONLY reference for curtain style, material, and color. Describe image first then generate base64.` }
           ];
         }
 
