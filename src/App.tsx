@@ -411,13 +411,13 @@ export default function App() {
           `;
         } else if (currentComp === '效果中景') {
           compositionPrompt = `
-            High-End Lifestyle Interior Photography — MID-RANGE SHOT (效果中景):
-            - [STRICT RULE]: Generate a SINGLE photograph of the room. ABSOLUTELY FORBIDDEN to create a split-screen, dual-view, collage, or side-by-side comparison.
-            - [CRITICAL]: REPLACE any existing curtains in the window area with the NEW curtain from the product image. 
-            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. ${saasContext}
-            - [CAMERA VIEW]: Move CLOSER (zoom in) to focus on the window and the NEW curtain. Capture the folds and drape from a medium distance. The entire frame is ONE single room view. ${saasPrompts}
-            - [PRODUCT FOCUS]: Showcase the ${curtainData?.material || 'textile'} texture and color from the reference image. The curtain should be the visual protagonist.
-            - Model Detail: East Asian female, elegant side profile. She is naturally interacting with the NEW ${curtainData?.texture || 'textile'} curtain.
+            High-End Lifestyle Interior Photography — MEDIUM CLOSE-UP VIEW (效果中景):
+            - [STRICT RULE]: Generate a SINGLE, UNIFIED photograph. ABSOLUTELY NO split-screens, NO "before/after", NO collages.
+            - [CAMERA PERSPECTIVE]: This is a partial, zoomed-in view of the scene from the first image. Focus specifically on the window area and the curtains.
+            - [CRITICAL REPLACEMENT]: Replace the curtains in the first image's window with the EXACT style, color, and material from the second image.
+            - [MANDATORY COMPOSITION]: Capture the drapery folds, fabric sheen, and floor-puddling details from a medium distance (approx 1.5-2 meters from the window). ${saasContext}
+            - [PRODUCT FOCUS]: The curtains from the second image must be the visual protagonist in this zoomed frame. ${saasPrompts}
+            - Model Detail: East Asian female, elegant side profile, chic beige jacket. She is interacting with the NEW curtain, showing its tactile quality.
           `;
         } else if (currentComp === '材质特写') {
           compositionPrompt = `
@@ -447,7 +447,17 @@ export default function App() {
           parts = [
             { inlineData: { mimeType: "image/jpeg", data: compressedScene!.split(',')[1] } },
             { inlineData: { mimeType: "image/jpeg", data: compressedCurtain!.split(',')[1] } },
-            { text: `TASK: Replace the existing curtains in the first image with the product shown in the second image. OUTPUT MUST BE A SINGLE UNIFIED PHOTO, NO SPLIT SCREEN.\n\nPROMPT: ${compositionPrompt}\n\nIMPORTANT: Use the second image as the ONLY reference for curtain style, material, and color. Describe image first then generate base64.` }
+            { text: `TASK: Replace the curtains in Image 1 with the product shown in Image 2. 
+            
+            [CRITICAL CONSTRAINTS]:
+            1. OUTPUT MUST BE A SINGLE INTEGRATED PHOTOGRAPH. 
+            2. ABSOLUTELY NO SPLIT SCREEN, NO COMPARISON, NO BEFORE/AFTER.
+            3. DO NOT SHOW IMAGE 1 AND IMAGE 2 SEPARATELY.
+            4. ONLY SHOW THE FINAL RESULTING SCENE.
+            
+            PROMPT: ${compositionPrompt}
+            
+            IMPORTANT: Use Image 2 as the ONLY reference for curtain style and color. Describe image first then generate base64.` }
           ];
         }
 
