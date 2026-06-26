@@ -412,9 +412,10 @@ export default function App() {
         } else if (currentComp === '效果中景') {
           compositionPrompt = `
             High-End Lifestyle Interior Photography — MID-RANGE SHOT (效果中景):
+            - [STRICT RULE]: Generate a SINGLE photograph of the room. ABSOLUTELY FORBIDDEN to create a split-screen, dual-view, collage, or side-by-side comparison.
             - [CRITICAL]: REPLACE any existing curtains in the window area with the NEW curtain from the product image. 
-            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. PROHIBIT any split-screens or collage patterns. ${saasContext}
-            - [CAMERA VIEW]: Move CLOSER (zoom in) to focus on the window and the NEW curtain. Capture the folds and drape from a medium distance. ${saasPrompts}
+            - [MANDATORY COMPOSITION]: This is a SINGLE, UNIFIED interior photograph. ${saasContext}
+            - [CAMERA VIEW]: Move CLOSER (zoom in) to focus on the window and the NEW curtain. Capture the folds and drape from a medium distance. The entire frame is ONE single room view. ${saasPrompts}
             - [PRODUCT FOCUS]: Showcase the ${curtainData?.material || 'textile'} texture and color from the reference image. The curtain should be the visual protagonist.
             - Model Detail: East Asian female, elegant side profile. She is naturally interacting with the NEW ${curtainData?.texture || 'textile'} curtain.
           `;
@@ -446,7 +447,7 @@ export default function App() {
           parts = [
             { inlineData: { mimeType: "image/jpeg", data: compressedScene!.split(',')[1] } },
             { inlineData: { mimeType: "image/jpeg", data: compressedCurtain!.split(',')[1] } },
-            { text: `TASK: Replace the existing curtains in the first image with the product shown in the second image.\n\nPROMPT: ${compositionPrompt}\n\nIMPORTANT: Use the second image as the ONLY reference for curtain style, material, and color. Describe image first then generate base64.` }
+            { text: `TASK: Replace the existing curtains in the first image with the product shown in the second image. OUTPUT MUST BE A SINGLE UNIFIED PHOTO, NO SPLIT SCREEN.\n\nPROMPT: ${compositionPrompt}\n\nIMPORTANT: Use the second image as the ONLY reference for curtain style, material, and color. Describe image first then generate base64.` }
           ];
         }
 
